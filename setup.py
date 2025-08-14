@@ -8,7 +8,7 @@ setup(
     include_package_data=True,
     install_requires=["Flask>=2.0.0"],
     entry_points={
-        # This is how wazo-calld discovers stack plugins (via stevedore)
+        # This is how wazo-calld discovers stack plugins
         "wazo_calld.plugins": [
             "hello_calld = hello_calld.plugin:Plugin",
         ],

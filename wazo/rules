@@ -5,19 +5,19 @@ CMD="${1:-}"; DEST="${2:-/}"
 
 case "$CMD" in
   install)
-    # 1) install Python deps into the build root (plugind copies this root)
+    # Install deps into the plugind build root
     if [ -f requirements.txt ]; then
       python3 -m pip install -r requirements.txt --root "$DEST" --prefix /usr
     fi
-    # 2) install our package itself into the build root
+    # Install our package into the build root
     python3 -m pip install . --root "$DEST" --prefix /usr --no-deps
-    # 3) drop our config so calld enables the plugin
+    # Enable the plugin in calld
     mkdir -p "$DEST/etc/wazo-calld/conf.d"
     install -m 0644 etc/wazo-calld/conf.d/50-hello-calld.yml \
       "$DEST/etc/wazo-calld/conf.d/50-hello-calld.yml"
     ;;
   uninstall)
-    # minimal example: nothing special
+    :
     ;;
   *)
     echo "usage: $0 {install|uninstall} <dest>" >&2
