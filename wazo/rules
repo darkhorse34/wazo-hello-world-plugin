@@ -1,26 +1,83 @@
 #!/usr/bin/env bash
+# wazo/rules — installer for Wazo stack plugins (runs inside wazo-plugind build root)
+# Usage (called by plugind): ./wazo/rules install <DESTDIR>  |  ./wazo/rules uninstall <DESTDIR>
+
 set -euo pipefail
 
-CMD="${1:-}"; DEST="${2:-/}"
+CMD="${1:-}"
+DEST="${2:-/}"
+
+log() { echo "[wazo/rules] $*" >&2; }
+die() { echo "[wazo/rules][ERROR] $*" >&2; exit 2; }
+
+# --- sanity checks -----------------------------------------------------------
+[[ -n "$CMD" ]]  || die "missing command (install|uninstall)"
+[[ -n "$DEST" ]] || die "missing DESTDIR"
+
+# Convert CRLF to LF if file came from Windows (harmless if already LF)
+# Requires sed (present on Debian/Ubuntu)
+if command -v sed >/dev/null 2>&1; then
+  sed -i 's/\r$//' "$0" || true
+fi
+
+# --- helpers ----------------------------------------------------------------
+install_python() {
+  # Install Python dependencies (if any) into the DEST root
+  if [[ -f requirements.txt ]]; then
+    log "Installing requirements into $DEST ..."
+    python3 -m pip install -r requirements.txt --root "$DEST" --prefix /usr
+  fi
+
+  # Install our package into the DEST root
+  log "Installing package into $DEST ..."
+  python3 -m pip install . --root "$DEST" --prefix /usr --no-deps
+}
+
+install_configs() {
+  # Enable the plugin for wazo-calld by dropping a conf file
+  local src_conf="etc/wazo-calld/conf.d/50-hello-calld.yml"
+  # If your plugin uses another name, adjust the line above accordingly.
+  if [[ -f "$src_conf" ]]; then
+    log "Copying calld config ..."
+    mkdir -p "$DEST/etc/wazo-calld/conf.d"
+    install -m 0644 "$src_conf" "$DEST/etc/wazo-calld/conf.d/50-hello-calld.yml"
+  else
+    # Allow alternate filename pattern (e.g., call-distributor)
+    # Copies any 50-*.yml you ship for calld
+    if compgen -G "etc/wazo-calld/conf.d/50-*.yml" > /dev/null; then
+      mkdir -p "$DEST/etc/wazo-calld/conf.d"
+      for f in etc/wazo-calld/conf.d/50-*.yml; do
+        log "Copying $(basename "$f") ..."
+        install -m 0644 "$f" "$DEST/etc/wazo-calld/conf.d/$(basename "$f")"
+      done
+    else
+      log "Warning: no etc/wazo-calld/conf.d/50-*.yml found; plugin may not be enabled"
+    fi
+  fi
+}
+
+uninstall_configs() {
+  # Best-effort cleanup (plugind usually handles uninstall by replacing the image)
+  if [[ -d "$DEST/etc/wazo-calld/conf.d" ]]; then
+    log "Leaving config files in $DEST/etc/wazo-calld/conf.d (no destructive cleanup)"
+  fi
+}
 
 case "$CMD" in
   install)
-    # Install deps into the plugind build root
-    if [ -f requirements.txt ]; then
-      python3 -m pip install -r requirements.txt --root "$DEST" --prefix /usr
-    fi
-    # Install our package into the build root
-    python3 -m pip install . --root "$DEST" --prefix /usr --no-deps
-    # Enable the plugin in calld
-    mkdir -p "$DEST/etc/wazo-calld/conf.d"
-    install -m 0644 etc/wazo-calld/conf.d/50-hello-calld.yml \
-      "$DEST/etc/wazo-calld/conf.d/50-hello-calld.yml"
+    log "BEGIN install to $DEST"
+    install_python
+    install_configs
+    log "END install"
     ;;
+
   uninstall)
-    :
+    log "BEGIN uninstall from $DEST"
+    uninstall_configs
+    log "END uninstall"
     ;;
+
   *)
-    echo "usage: $0 {install|uninstall} <dest>" >&2
-    exit 2
+    die "unknown command: $CMD (expected: install|uninstall)"
     ;;
 esac
