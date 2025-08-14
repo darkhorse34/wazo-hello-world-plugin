@@ -4,5 +4,4 @@ bp = Blueprint("hello_calld", __name__)
 
 @bp.route("/hello", methods=["GET"])
 def hello():
-    # minimal test endpoint
-    return jsonify({"ok": True, "service": "wazo-calld", "plugin": "hello-calld"})
+    return jsonify({"ok": True, "plugin": "hello-calld"})

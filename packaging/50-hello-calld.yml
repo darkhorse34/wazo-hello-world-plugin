@@ -1,2 +1,5 @@
 enabled_plugins:
   hello_calld: true
+
+# (you can put plugin settings here later if you want)
+hello_calld: {}
