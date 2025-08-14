@@ -1,0 +1,4 @@
+namespace: yourco
+name: hello-calld
+version: 0.1.0
+plugin_format_version: 0

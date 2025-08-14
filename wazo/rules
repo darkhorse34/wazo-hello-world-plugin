@@ -1,0 +1,20 @@
+#!/usr/bin/env bash
+set -euo pipefail
+cmd="${1:-}"; dest="${2:-/}"
+
+case "$cmd" in
+  install)
+    # install the python package into the image root passed by plugind
+    python3 -m pip install . --root "$dest" --prefix /usr --no-deps
+    # enable the plugin in calld
+    mkdir -p "$dest/etc/wazo-calld/conf.d"
+    cp packaging/50-hello-calld.yml "$dest/etc/wazo-calld/conf.d/"
+    ;;
+  uninstall)
+    # no-op for this minimal example
+    ;;
+  *)
+    echo "Usage: $0 {install|uninstall} <destdir>" >&2
+    exit 2
+    ;;
+esac
